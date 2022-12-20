@@ -34,7 +34,7 @@ git clone --depth=1 "$APT_BUILDPACK_URL" "$apt_deps_buildpack_dir"
 # them (it would make the buildpack fail).
 
 # Reset APT_FILE_MANIFEST so we don't re-install Apache:
-rm "${APT_FILE_MANIFEST}"
+rm "${BUILD_DIR}/${APT_FILE_MANIFEST}"
 
 # Build the list of modules to install:
 if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
