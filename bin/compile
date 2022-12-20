@@ -38,24 +38,28 @@ rm "${BUILD_DIR}/${APT_FILE_MANIFEST}"
 
 # Build the list of modules to install:
 if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
-  grep -E '^[a-z-]+$' < "${BUILD_DIR}/.apache-mods" | while IFS= read -r apache_mod ; do
+    install_external_mod="false"
+
+    grep -E '^[a-z-]+$' < "${BUILD_DIR}/.apache-mods" | while IFS= read -r apache_mod ; do
     apache_mod_filename="mod_$( echo "${apache_mod}" | tr "-" "_" ).so"
     install_mod="$( ls "${BUILD_DIR}/.apt/usr/lib/apache2/modules/" \
                     | { grep --count "${apache_mod_filename}" || true; } )"
 
     # If the module isn't shipped by default, let's install it:
     if [ ${install_mod} -eq 0 ]; then
+        install_external_mod="true"
         echo "libapache2-mod-${apache_mod}" >> "$BUILD_DIR/${APT_FILE_MANIFEST}"
     fi
-
   done
-fi
 
-# We finally have to call the apt-buildpack again, this time to install the
-# missing Apache modules that we just filtered out.
-# At this point, if the module can't be found, it means it's neither a default
-# module nor an installable one. And the buildpack will fail.
-"${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
+  # We finally have to call the apt-buildpack again, this time to install the
+  # missing Apache modules that we just filtered out.
+  # At this point, if the module can't be found, it means it's neither a default
+  # module nor an installable one. And the buildpack will fail.
+  if [ "${install_external_mod}" == "true"]; then
+    "${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
+  fi
+fi
 
 rm -r "$apt_deps_buildpack_dir"
 
