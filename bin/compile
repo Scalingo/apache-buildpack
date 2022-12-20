@@ -14,11 +14,6 @@ export APACHE_DIR="${APACHE_DIR:-$BUILD_DIR/vendor/apache2}"
 
 echo "apache2" >> "$BUILD_DIR/Aptfile"
 
-if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
-  grep -E '^[a-z-]+$' < "${BUILD_DIR}/.apache-mods" | while IFS= read -r apache_mod ; do
-    echo "libapache2-mod-${apache_mod}" >> "$BUILD_DIR/Aptfile"
-  done
-fi
 
 apt_deps_buildpack_dir=$(mktemp apt_buildpack_XXXX)
 
@@ -28,6 +23,27 @@ rm "$apt_deps_buildpack_dir"
 APT_BUILDPACK_URL="${APT_BUILDPACK_URL:-https://github.com/Scalingo/apt-buildpack}"
 git clone --depth=1 "$APT_BUILDPACK_URL" "$apt_deps_buildpack_dir"
 
+"${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
+
+
+
+if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
+  grep -E '^[a-z-]+$' < "${BUILD_DIR}/.apache-mods" | while IFS= read -r apache_mod ; do
+    apache_mod_filename="mod_$( echo "${apache_mod}" | tr "-" "_" ).so"
+    ls "${BUILD_DIR}/.apt/usr/lib/apache2/modules" \
+        | grep --quiet "${apache_mod_filename}"
+
+    # if the previous grep doesn't find a result, we have to install the module
+    if [ ${?} -ne 0 ]; then
+        echo "libapache2-mod-${apache_mod}" >> "$BUILD_DIR/Aptfile"
+    fi
+
+  done
+fi
+
+# 
+# 
+# 
 "${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
 
 rm -r "$apt_deps_buildpack_dir"
