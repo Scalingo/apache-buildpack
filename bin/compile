@@ -56,7 +56,7 @@ if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
   # missing Apache modules that we just filtered out.
   # At this point, if the module can't be found, it means it's neither a default
   # module nor an installable one. And the buildpack will fail.
-  if [ "${install_external_mod}" == "true" ]; then
+  if [ "${install_external_mod}" = "true" ]; then
     "${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
   fi
 fi
