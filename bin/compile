@@ -6,10 +6,14 @@ basedir="$( cd -P "$( dirname "$0" )" && pwd )"
 set -e
 set -o pipefail
 
+if [ -n "${BUILDPACK_DEBUG}" ]; then
+  set -x
+fi
+
 # Configure directories
-BUILD_DIR=$1
-CACHE_DIR=$2
-ENV_DIR=$3
+BUILD_DIR="${1}"
+CACHE_DIR="${2}"
+ENV_DIR="${3}"
 
 export APACHE_DIR="${APACHE_DIR:-$BUILD_DIR/vendor/apache2}"
 export APT_FILE_MANIFEST="Aptfile.apache"
@@ -20,13 +24,13 @@ echo "apache2" >> "$BUILD_DIR/${APT_FILE_MANIFEST}"
 apt_deps_buildpack_dir=$(mktemp apt_buildpack_XXXX)
 
 # only the name is interesting, deleting the temp empty file
-rm "$apt_deps_buildpack_dir"
+rm "${apt_deps_buildpack_dir}"
 
 APT_BUILDPACK_URL="${APT_BUILDPACK_URL:-https://github.com/Scalingo/apt-buildpack}"
-git clone --depth=1 "$APT_BUILDPACK_URL" "$apt_deps_buildpack_dir"
+git clone --depth=1 "${APT_BUILDPACK_URL}" "${apt_deps_buildpack_dir}"
 
 # We first install Apache alone:
-"${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
+"${apt_deps_buildpack_dir}/bin/compile" "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
 
 
 # Then we have to filter out the list of modules the user requires.
@@ -37,9 +41,7 @@ git clone --depth=1 "$APT_BUILDPACK_URL" "$apt_deps_buildpack_dir"
 rm "${BUILD_DIR}/${APT_FILE_MANIFEST}"
 
 # Build the list of modules to install:
-if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
-    install_external_mod="false"
-
+if [ -f "${BUILD_DIR}/.apache-mods" ]; then
     grep -E '^[a-z-]+$' < "${BUILD_DIR}/.apache-mods" | while IFS= read -r apache_mod ; do
     apache_mod_filename="mod_$( echo "${apache_mod}" | tr "-" "_" ).so"
     install_mod="$( ls "${BUILD_DIR}/.apt/usr/lib/apache2/modules/" \
@@ -47,8 +49,7 @@ if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
 
     # If the module isn't shipped by default, let's install it:
     if [ ${install_mod} -eq 0 ]; then
-        install_external_mod="true"
-        echo "libapache2-mod-${apache_mod}" >> "$BUILD_DIR/${APT_FILE_MANIFEST}"
+      echo "libapache2-mod-${apache_mod}" >> "${BUILD_DIR}/${APT_FILE_MANIFEST}"
     fi
   done
 
@@ -56,12 +57,12 @@ if [ -f "${BUILD_DIR}/.apache-mods" ] ; then
   # missing Apache modules that we just filtered out.
   # At this point, if the module can't be found, it means it's neither a default
   # module nor an installable one. And the buildpack will fail.
-  if [ "${install_external_mod}" = "true" ]; then
-    "${apt_deps_buildpack_dir}/bin/compile" "$BUILD_DIR" "$CACHE_DIR" "$ENV_DIR"
+  if [ -f "${BUILD_DIR}/${APT_FILE_MANIFEST}" ]; then
+    "${apt_deps_buildpack_dir}/bin/compile" "${BUILD_DIR}" "${CACHE_DIR}" "${ENV_DIR}"
   fi
 fi
 
-rm -r "$apt_deps_buildpack_dir"
+rm -r "${apt_deps_buildpack_dir}"
 
 mkdir -p "${APACHE_DIR}/logs"
 mkdir -p "${APACHE_DIR}/conf"
