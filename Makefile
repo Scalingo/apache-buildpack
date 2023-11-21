@@ -9,6 +9,5 @@ test: docker
 
 docker:
 	@echo "Running tests in Docker using $(IMAGE)"
-	@docker pull $(IMAGE)
-	@docker run -v $(PWD):/buildpack:ro --rm --user appsdeck -it -e "GITLAB_TOKEN=$(GITLAB_TOKEN)" -e "GITHUB_TOKEN=$(GITHUB_TOKEN)" -e "STACK=$(STACK)" $(IMAGE) bash -c "cd /buildpack; $(BASH_COMMAND)"
+	@docker run --pull always -v $(PWD):/buildpack:ro --rm --user appsdeck -it -e "GITLAB_TOKEN=$(GITLAB_TOKEN)" -e "GITHUB_TOKEN=$(GITHUB_TOKEN)" -e "STACK=$(STACK)" $(IMAGE) bash -c "cd /buildpack; $(BASH_COMMAND)"
 
