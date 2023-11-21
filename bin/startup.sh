@@ -4,8 +4,7 @@ export APACHE_WORKER_SIZE="${APACHE_WORKER_SIZE:="10"}"
 export APACHE_THREADS_PER_CHILD="${APACHE_THREADS_PER_CHILD:="25"}"
 
 # Setting Mellon key, cert and metadata files
-if grep -q "auth-mellon" "${HOME}/.apache-mods" ; then
-  
+if [[ -f "${HOME}/.apache-mods" && $(grep -ic "auth-mellon" "${HOME}/.apache-mods") -eq 1 ]] ; then
   export APACHE_DIR="${APACHE_DIR:-$HOME/vendor/apache2}"
   export MELLON_DIR="${MELLON_DIR:-$APACHE_DIR/mellon}"
   mkdir -p "${MELLON_DIR}"
@@ -101,4 +100,4 @@ fi
 
 # Starting
 echo "Starting Apache..."
-"${HOME}/.apt/usr/sbin/apache2" -f "${HOME}/vendor/apache2/conf/httpd.conf" -DFOREGROUND
+exec "${HOME}/.apt/usr/sbin/apache2" -f "${HOME}/vendor/apache2/conf/httpd.conf" -DFOREGROUND

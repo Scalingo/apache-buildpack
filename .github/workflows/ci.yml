@@ -1,0 +1,43 @@
+---
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: "Unit Tests (${{ matrix.stack }})"
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        stack:
+          - scalingo-20
+          - scalingo-22
+    container:
+      image: "scalingo/${{ matrix.stack }}:latest"
+      env:
+        STACK: "${{ matrix.stack }}"
+    steps:
+      - name: 🛎  Checkout
+        uses: actions/checkout@v4
+
+      - name: Install sudo
+        run: |
+          apt-get update && apt-get install -y sudo
+
+      - name: 🔎 Run tests
+        # 1. Clean docker config to prevent errors in APT buildpack
+        #
+        # 2. Use non-privileged user since embedded APT buildpack does not support
+        # being root
+        run: |
+          rm /etc/apt/apt.conf.d/docker-clean && \
+          sudo -u appsdeck test/run
+...
