@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+source "$(pwd)"/test/utils
+
+testApacheMods() {
+  compile "apache-mods"
+  assertCapturedSuccess
+  assertCaptured "libapache2-mod-auth-openidc"
+
+  runApacheInBackground
+  assertFileContains "LoadModule auth_openidc" "${BUILD_DIR}/vendor/apache2/conf/httpd.conf"
+  terminateApache
+}
+
+testApacheEnvironment() {
+  compile "apache-success"
+  assertCapturedSuccess
+  assertDirectoryExists "${BUILD_DIR}/vendor/apache2"
+  assertDirectoryExists "${BUILD_DIR}/vendor/apache2/logs"
+  assertDirectoryExists "${BUILD_DIR}/vendor/apache2/conf"
+  assertFileExists "${BUILD_DIR}/vendor/apache2/conf/httpd.conf.erb"
+  assertDirectoryExists "${BUILD_DIR}/bin"
+  assertFileExists "${BUILD_DIR}/bin/startup.sh"
+}
+
+
+# Utility methods
+runApacheInBackground() {
+  OLD_HOME="${HOME}"
+  export HOME="${BUILD_DIR}"
+  # Require for Apache configuration to have a www root dir.
+  mkdir "${BUILD_DIR}/www"
+  source "${BUILD_DIR}/.profile.d/000_apt.sh"
+  APACHE_CUSTOM_LOG="${BUILD_DIR}/apache-custom.log" APACHE_ERROR_LOG="${BUILD_DIR}/apache-error.log" PORT=3000 bin/startup.sh &
+  echo $! > "${BUILD_DIR}/apache.pid"
+  sleep 0.5
+  export HOME="${OLD_HOME}"
+}
+
+terminateApache() {
+  kill -TERM $(cat "${BUILD_DIR}/apache.pid")
+}
+
+compile() {
+  bp_dir=$(mktmpdir buildpack)
+  cp -a "$(pwd)"/* ${bp_dir}
+  cp -a ${bp_dir}/test/fixtures/$1/. ${BUILD_DIR}
+
+  cd "${compile_dir}"
+  capture ${bp_dir}/bin/compile ${BUILD_DIR} ${CACHE_DIR}
+}
+
+mktmpdir() {
+  mktemp -d "/tmp/apache-bp-test-${1:-}-XXXXX"
+}
+
+# Add these functions to the test suite:
+suite_addTest testApacheEnvironment
+suite_addTest testApacheMods
